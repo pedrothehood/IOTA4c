@@ -1,0 +1,8 @@
+Bibliothek WiFi in Version 3.3.8 im Ordner: C:\Users\peter\AppData\Local\Arduino15\packages\esp32\hardware\esp32\3.3.8\libraries\WiFi  wird verwendet
+Bibliothek Networking in Version 3.3.8 im Ordner: C:\Users\peter\AppData\Local\Arduino15\packages\esp32\hardware\esp32\3.3.8\libraries\Network  wird verwendet
+Bibliothek ESP Async WebServer in Version 3.6.0 im Ordner: C:\Users\peter\Documents\Arduino\libraries\ESP_Async_WebServer  wird verwendet
+Bibliothek FS in Version 3.3.8 im Ordner: C:\Users\peter\AppData\Local\Arduino15\packages\esp32\hardware\esp32\3.3.8\libraries\FS  wird verwendet
+Bibliothek Async TCP in Version 3.3.2 im Ordner: C:\Users\peter\Documents\Arduino\libraries\Async_TCP  wird verwendet
+Bibliothek ArduinoJson in Version 7.4.3 im Ordner: C:\Users\peter\Documents\Arduino\libraries\ArduinoJson  wird verwendet
+Bibliothek RD03D_Arduino in Version 1.0.1 im Ordner: C:\Users\peter\Documents\Arduino\libraries\RD03D_Arduino  wird verwendet
+Bibliothek Hash in Version 3.3.8 im Ordner: C:\Users\peter\AppData\Local\Arduino15\packages\esp32\hardware\esp32\3.3.8\libraries\Hash  wird verwendet
