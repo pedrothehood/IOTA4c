@@ -1,0 +1,20 @@
+# Temporäre Build-Ordner der Arduino IDE
+build/
+bin/
+out/
+
+# PlatformIO (falls du es nutzt)
+.pio/
+.pioenvs/
+
+# Lokale Einstellungen der IDE
+.vscode/
+.settings/
+*.un~
+
+# Betriebssystem-spezifische Dateien
+.DS_Store
+Thumbs.db
+
+# Backup-Dateien der Arduino IDE
+*.bak

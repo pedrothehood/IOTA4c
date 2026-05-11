@@ -48,19 +48,27 @@ canvas {
     <canvas id="radar" width="600" height="450"></canvas>
     <div id="status">Verbinde WebSocket...</div>
     <script>
-    
-    
     const canvas = document.getElementById('radar');
 const ctx = canvas.getContext('2d');
 const status = document.getElementById('status');
 const socket = new WebSocket('ws://' + window.location.hostname + '/ws');
-
+let currentTargets = []; // Speicher für die letzten Daten
 socket.onopen = () => status.innerText = "ONLINE";
 socket.onclose = () => status.innerText = "OFFLINE";
+
+// Nur Daten empfangen, NICHT zeichnen
+socket.onmessage = (event) => {
+    try {
+        currentTargets = JSON.parse(event.data);
+    } catch (e) {
+        console.error("JSON Error", e);
+    }
+};
 
 function drawUI() {
     ctx.strokeStyle = 'rgba(0, 255, 65, 0.15)';
     ctx.lineWidth = 1;
+	  ctx.font = "10px monospace";
     // Entfernungskreise
     for(let i=1; i<=4; i++) {
         ctx.beginPath();
@@ -75,34 +83,39 @@ function drawUI() {
     ctx.stroke();
 }
 
-socket.onmessage = (event) => {
-    const targets = JSON.parse(event.data);
-    
-    // Motion Blur Effekt
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+//neu// Zentrale Render-Schleife (60 FPS)
+function render() {
+    // Sanfter Motion Blur
+    ctx.fillStyle = 'rgba(5, 5, 5, 0.2)'; 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     drawUI();
 
-    targets.forEach(t => {
+    currentTargets?.targets?.forEach(t => {
         const x = 300 + (t.x / 10);
         const y = 430 - (t.y / 10);
-        const color = (t.s > 0) ? '255, 50, 50' : '50, 255, 50';
+        const isMoving = Math.abs(t.s) > 5; // Kleiner Schwellenwert für Bewegung
+        const color = isMoving ? '255, 50, 50' : '50, 255, 50';
 
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = `rgb(${color})`;
+        // Zeichne Ziel
         ctx.fillStyle = `rgb(${color})`;
-        
         ctx.beginPath();
         ctx.arc(x, y, 7, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.font = "bold 14px Arial"; // Setzt die Grösse auf 16 Pixel
-        ctx.shadowBlur = 0;
+        // Glow-Effekt ohne teures shadowBlur (optional)
+        ctx.strokeStyle = `rgba(${color}, 0.3)`;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
         ctx.fillStyle = "#fff";
         ctx.fillText(`ID:${t.id} ${t.s}cm/s`, x + 12, y);
     });
-};  
+
+	requestAnimationFrame(render);
+}
+// Starte die Schleife
+render();
     </script>
 </body>
 </html>
@@ -111,12 +124,6 @@ socket.onmessage = (event) => {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  // Serial1.begin(256000, SERIAL_8N1, SENSOR_RX, SENSOR_TX);
-
-  /*  if(!LittleFS.begin(true)) {
-           Serial.println("LittleFS Fehler!");
-           return;
-       }  */
   Serial.print("Wifi verbinden");
   WiFi.begin(ssid, password);
 
@@ -137,10 +144,8 @@ void setup() {
     }
   }
   delay(500);  // Dem System Zeit geben, den Stack zu stabilisieren
-  Serial.println("Add handler");
+  //Serial.println("Add handler");
   server.addHandler(&ws);
-  Serial.println("ServeStatic");
-  //   server.serveStatic("/", LittleFS, "/");
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send_P(200, "text/html", index_html);
   });
@@ -153,34 +158,40 @@ void loop() {
   static uint64_t next_screen_update = 0;
   static bool detected = false;
 
-  radar.tasks();
   ws.cleanupClients();
+  radar.tasks();
 
   static uint32_t lastMsg = 0;
-  if (millis() - lastMsg > 100)  // vib 50 auf 100 wegen Offline?
-  {                              // 20Hz für flüssige Grafik
-    lastMsg = millis();
-
-    JsonDocument doc;
-    JsonArray array = doc.to<JsonArray>();
-    bool found = false;
-
-    for (uint8_t i = 0; i < RD03D::MAX_TARGETS; i++) {
-      TargetData *t = radar.getTarget(i);
-      if (t->isValid()) {
-        JsonObject obj = array.add<JsonObject>();
-        obj["id"] = i;
-        obj["x"] = t->x;
-        obj["y"] = t->y;
-        obj["s"] = t->speed;
-        found = true;
+  unsigned long now = millis();
+  static unsigned long lastWSUpdate = 0;
+  if (now - lastWSUpdate > 50) {
+    lastWSUpdate = now;
+    if (ws.count() > 0 && ws.availableForWriteAll()) {
+      bool found = false;
+      // Prüfe ob ein Ziel erkannt wurde, bevor du sendest
+      if (RD03D::MAX_TARGETS > 0) {
+        String json = "{\"targets\":[";
+        bool first = true;
+        for (int i = 0; i < RD03D::MAX_TARGETS; i++) {
+          TargetData *t = radar.getTarget(i);
+          //Serial.println("After TargetData");
+          if (t && t->isValid()) {
+            if (!first) json += ",";
+            json += "{\"x\":" + String(t->x)
+                    + ",\"y\":" + String(t->y)
+                    + ",\"s\":" + String(t->speed)
+                    + ",\"id\":" + String(i) + "}";
+            first = false;
+          }
+        }
+        json += "]}";
+        if (!first) {
+          ws.textAll(json);
+        }
       }
     }
-
-    if (found && ws.count() > 0) {
-      String out;
-      serializeJson(doc, out);
-      ws.textAll(out);
-    }
+    // lastWSUpdate = millis();
+    // delay(500);  // Dem System Zeit geben, den Stack zu stabilisieren TTTTTTTTTTTTTTT
   }
 }
+
